@@ -1,13 +1,13 @@
--- Register the mod, which grants the ability to add code that correspond to in-game events (i.e. "callbacks").
+    -- Register the mod, which grants the ability to add code that correspond to in-game events (i.e. "callbacks").
 local mod = RegisterMod("Count Red Key Rooms", 1)
 
 --[[ Steps: 
-    Starting in the player's room, check around it for rooms that exist
-    Open every red room connected to the given room
-    Now find the rooms that exist again
-    The difference between these two lists are the new red rooms
-    Record its stats, then call this method in them
-    Once all of the methods have been called, return
+    Make sure this function has not been called in this room, and that this room is a 1x1
+    Starting in the player's room, open each red door one at a time
+    If a red door is opened successfully, check if it leads OOB
+    If it is in bounds, record it 
+    Then call this method on every surrounding existing room
+    Then return
 --]]
 
 local recordData = {["numRooms"] = 0}
@@ -72,27 +72,27 @@ function MapRoom(RoomIndex)
     end
     
     print(RoomIndex .. "")
-    
-    -- Get starting existing rooms
-    local startingExistingRooms = GetBorderingRooms(RoomIndex)
-    
-    -- Open all red rooms
-    OpenAllRedKeyRooms(RoomIndex)
-    
-    -- Get existing rooms including new red ones
-    local redExistingRooms = GetBorderingRooms(RoomIndex)
-    
-    -- Check differences between the two
-    local redRooms = {}
-    for i = 1, 4 do
-        -- If a room is nil in starting and nonnil in red, add it to this
-        redRooms[i] = startingExistingRooms[i] or redExistingRooms[i]
-        if redRooms[i] then RecordStats(redRooms[i]) end
+
+    for i = 0, 3 do
+        if level:MakeRedRoomDoor(RoomIndex, i) then
+            if i == 0 and RoomIndex % 13 ~= 0 then
+                RecordStats(RoomIndex - 1)
+            elseif i == 1 and RoomIndex > 12 then
+                RecordStats(RoomIndex - 13)
+            elseif i == 2 and RoomIndex % 13 ~= 12 then
+                RecordStats(RoomIndex + 1)
+            elseif i == 3 and RoomIndex < 156 then
+                RecordStats(RoomIndex + 13)
+            end
+        end
     end
-    
-    -- Now call this method on all surrounding rooms
+
+    existingRooms = GetBorderingRooms(RoomIndex)
+
     for i = 1, 4 do
-        if redExistingRooms[i] then MapRoom(redExistingRooms[i]) end
+        if existingRooms[i] then
+            MapRoom(existingRooms[i])
+        end
     end
 end
 
